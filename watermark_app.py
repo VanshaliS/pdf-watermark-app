@@ -60,6 +60,7 @@ def add_watermark(input_pdf, watermark_text, original_filename):
 
 # --- Streamlit App ---
 st.title("📄 PDF Watermarker")
+st.image("fortelogo.png", width=120)  # 👈 Add your company logo here
 
 watermark_text = st.text_input("Enter watermark text")
 uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
@@ -74,4 +75,6 @@ if uploaded_file and watermark_text:
             data=result_pdf,
             file_name=new_filename,
             mime="application/pdf"
+        )
+
         )

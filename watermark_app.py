@@ -3,6 +3,7 @@ import PyPDF2
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from datetime import datetime
 
 # Create watermark PDF in memory
 def create_watermark(watermark_text):
@@ -10,8 +11,14 @@ def create_watermark(watermark_text):
     can = canvas.Canvas(packet, pagesize=letter)
     can.setFont("Helvetica", 40)
     can.setFillColorRGB(0.6, 0.6, 0.6, alpha=0.3)
-    can.rotate(45)
-    can.drawString(100, 300, watermark_text)
+
+    # Get width and height to center text
+    width, height = letter
+    text_width = can.stringWidth(watermark_text, "Helvetica", 40)
+    x = (width - text_width) / 2
+    y = height / 2
+
+    can.drawString(x, y, watermark_text)
     can.save()
     packet.seek(0)
     return PyPDF2.PdfReader(packet)
@@ -44,10 +51,14 @@ if uploaded_file and watermark_text:
     watermarked_pdf = add_watermark(uploaded_file, watermark_text)
     st.success("✅ Watermark added successfully!")
 
+    # Generate filename: "WatermarkText_YYYYMMDD.pdf"
+    today_str = datetime.now().strftime("%Y%m%d")
+    safe_name = watermark_text.replace(" ", "_")  # remove spaces
+    filename = f"{safe_name}_{today_str}.pdf"
+
     st.download_button(
         label="📥 Download Watermarked PDF",
         data=watermarked_pdf,
-        file_name="watermarked.pdf",
+        file_name=filename,
         mime="application/pdf"
     )
-

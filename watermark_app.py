@@ -9,8 +9,10 @@ import os
 def create_watermark(watermark_text, page_width, page_height):
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=(page_width, page_height))
-    can.setFont("Helvetica", 30)
-    can.setFillColorRGB(0.6, 0.6, 0.6, alpha=0.2)
+    can.setFont("Helvetica-Bold", 35)
+
+    # Set watermark color (semi-transparent red)
+    can.setFillColorRGB(1, 0, 0, alpha=0.4)
 
     # Draw watermark diagonally across page
     step_x = 300
@@ -26,6 +28,7 @@ def create_watermark(watermark_text, page_width, page_height):
     can.save()
     packet.seek(0)
     return PyPDF2.PdfReader(packet)
+
 
 # Apply watermark
 def add_watermark(input_pdf, watermark_text, original_filename):

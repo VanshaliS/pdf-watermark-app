@@ -1,76 +1,53 @@
 import streamlit as st
-import os
-import tempfile
-import subprocess
-import pypandoc
-from PyPDF2 import PdfReader, PdfWriter
+import PyPDF2
+from io import BytesIO
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import letter
 
-# Convert to PDF if needed
-def convert_to_pdf(file):
-    suffix = os.path.splitext(file.name)[-1].lower()
-    input_temp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    input_temp.write(file.read())
-    input_temp.close()
-
-    if suffix == ".pdf":
-        return input_temp.name
-    else:
-        # Convert using pandoc
-        output_path = input_temp.name.replace(suffix, ".pdf")
-        try:
-            pypandoc.convert_file(input_temp.name, 'pdf', outputfile=output_path)
-            return output_path
-        except Exception as e:
-            st.error(f"Failed to convert {file.name} to PDF: {e}")
-            return None
-
-# Create watermark
-def create_watermark(text):
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    c = canvas.Canvas(temp_file.name, pagesize=A4)
-    c.setFont("Helvetica", 40)
-    c.setFillAlpha(0.3)
-    c.drawCentredString(300, 500, text)
-    c.save()
-    return temp_file.name
+# Create watermark PDF in memory
+def create_watermark(watermark_text):
+    packet = BytesIO()
+    can = canvas.Canvas(packet, pagesize=letter)
+    can.setFont("Helvetica", 40)
+    can.setFillColorRGB(0.6, 0.6, 0.6, alpha=0.3)
+    can.rotate(45)
+    can.drawString(100, 300, watermark_text)
+    can.save()
+    packet.seek(0)
+    return PyPDF2.PdfReader(packet)
 
 # Apply watermark
-def apply_watermark(pdf_path, watermark_path):
-    reader = PdfReader(pdf_path)
-    writer = PdfWriter()
-    watermark = PdfReader(watermark_path).pages[0]
+def add_watermark(input_pdf, watermark_text):
+    watermark = create_watermark(watermark_text)
+    watermark_page = watermark.pages[0]
+
+    output = PyPDF2.PdfWriter()
+    reader = PyPDF2.PdfReader(input_pdf)
 
     for page in reader.pages:
-        page.merge_page(watermark)
-        writer.add_page(page)
+        page.merge_page(watermark_page)
+        output.add_page(page)
 
-    output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    with open(output_pdf.name, "wb") as f_out:
-        writer.write(f_out)
-
-    return output_pdf.name
+    result = BytesIO()
+    output.write(result)
+    result.seek(0)
+    return result
 
 # Streamlit UI
-st.set_page_config(page_title="📄 Any File to Watermarked PDF", layout="centered")
-st.title("💧 Watermark Any File")
+st.title("📄 PDF Watermarker App")
 
-watermark_text = st.text_input("Enter the watermark text")
-uploaded_files = st.file_uploader("Upload files (PDF, Word, Excel, etc.)", accept_multiple_files=True)
+watermark_text = st.text_input("Enter watermark text")
 
-if watermark_text and uploaded_files:
-    if st.button("Convert & Add Watermark"):
-        watermark_pdf = create_watermark(watermark_text)
-        for file in uploaded_files:
-            pdf_path = convert_to_pdf(file)
-            if pdf_path:
-                output = apply_watermark(pdf_path, watermark_pdf)
-                with open(output, "rb") as f:
-                    st.download_button(
-                        label=f"Download Watermarked: {file.name}.pdf",
-                        data=f,
-                        file_name=f"WM_{file.name}.pdf",
-                        mime="application/pdf"
-                    )
-        os.remove(watermark_pdf)
+uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
+
+if uploaded_file and watermark_text:
+    watermarked_pdf = add_watermark(uploaded_file, watermark_text)
+    st.success("✅ Watermark added successfully!")
+
+    st.download_button(
+        label="📥 Download Watermarked PDF",
+        data=watermarked_pdf,
+        file_name="watermarked.pdf",
+        mime="application/pdf"
+    )
+

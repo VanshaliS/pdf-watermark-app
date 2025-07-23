@@ -11,8 +11,8 @@ def create_watermark(watermark_text, page_width, page_height):
     can = canvas.Canvas(packet, pagesize=(page_width, page_height))
     can.setFont("Helvetica-Bold", 35)
 
-    # Set watermark color (semi-transparent red)
-    can.setFillColorRGB(1, 0, 0, alpha=0.4)
+     # Softer red with moderate transparency
+    can.setFillColorRGB(1, 0.3, 0.3, alpha=0.35)
 
     # Draw watermark diagonally across page
     step_x = 300
